@@ -16,7 +16,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'  # Minecraft模组通常用.NET 6
+        dotnet-version: '8.0.x'  # Minecraft模组通常用.NET 8
         
     - name: Show project structure
       shell: cmd
@@ -61,7 +61,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: HsMod-Main-DLL
-        path: HsMod/bin/Release/net6.0-windows/HsMod.dll
+        path: HsMod/bin/Release/net8.0-windows/HsMod.dll
         if-no-files-found: error
         
     - name: Upload all Release files
