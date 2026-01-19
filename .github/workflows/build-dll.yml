@@ -1,0 +1,40 @@
+name: Build HsMod DLL
+
+on:
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '6.0.x'  # 这个项目需要.NET 6
+        
+    - name: Restore NuGet packages
+      run: dotnet restore
+      
+    - name: Build in Release mode
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: List all DLL files
+      run: dir /s *.dll
+      
+    - name: Upload HsMod DLL
+      uses: actions/upload-artifact@v3
+      with:
+        name: HsMod-DLL-Files
+        path: |
+          **/HsMod.dll
+          **/HsMod.*.dll
+          
+    - name: Upload All Output
+      uses: actions/upload-artifact@v3
+      with:
+        name: All-Build-Output
+        path: bin/Release/
