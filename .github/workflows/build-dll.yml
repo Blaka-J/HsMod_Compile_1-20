@@ -1,13 +1,9 @@
 name: Build HsMod DLL
 
 on:
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:  # 手动触发
   push:
     branches: [ main ]
-
-permissions:
-  contents: read
-  actions: write
 
 jobs:
   build:
@@ -16,57 +12,61 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        submodules: recursive  # 重要：包含子模块
-        
+      
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: |
-          6.0.x
-          7.0.x
-          8.0.x
-          
-    - name: Show project structure
-      run: |
-        echo "=== 项目结构 ==="
-        dir
-        echo "=== 寻找项目文件 ==="
-        dir /s *.csproj *.sln 2>nul || echo "未找到项目文件"
+        dotnet-version: '8.0.x'  # Minecraft模组通常用.NET 6
         
-    - name: Try to find and build solution
+    - name: Show project structure
+      shell: cmd
       run: |
-        # 尝试查找并构建项目
-        if exist "*.sln" (
-          echo "找到解决方案文件，开始构建..."
-          dotnet build *.sln --configuration Release -p:Platform="Any CPU"
+        @echo off
+        echo 当前目录：%CD%
+        echo.
+        echo HsMod文件夹内容：
+        dir HsMod
+        echo.
+        echo 确认项目文件：
+        if exist "HsMod\HsMod.csproj" (
+          echo √ 找到 HsMod.csproj
+          type "HsMod\HsMod.csproj" | findstr "TargetFramework"
         ) else (
-          echo "查找.csproj文件..."
-          for /f "delims=" %%i in ('dir /s /b *.csproj') do (
-            echo "构建项目: %%~nxi"
-            dotnet build "%%i" --configuration Release
-          )
+          echo × 未找到项目文件
+          exit 1
         )
         
-    - name: List all generated files
+    - name: Restore NuGet packages
+      run: dotnet restore HsMod/HsMod.csproj
+      
+    - name: Build Release version
+      run: dotnet build HsMod/HsMod.csproj --configuration Release --no-restore
+      
+    - name: Show build output
+      shell: cmd
       run: |
-        echo "=== 查找所有DLL文件 ==="
-        dir /s *.dll 2>nul || echo "未找到DLL文件"
-        echo "=== 构建输出目录 ==="
-        if exist bin dir bin /s
+        @echo off
+        echo ===== 编译输出目录 =====
+        if exist "HsMod\bin\Release" (
+          echo Release目录内容：
+          dir "HsMod\bin\Release" /s /b
+        )
         
-    - name: Upload DLL artifacts
+        if exist "HsMod\bin\Debug" (
+          echo Debug目录内容：
+          dir "HsMod\bin\Debug" /s /b
+        )
+        
+    - name: Upload main DLL
       uses: actions/upload-artifact@v4
       with:
-        name: HsMod-DLLs
-        path: |
-          **/bin/Release/**/*.dll
-          **/Release/**/*.dll
-        if-no-files-found: warn
+        name: HsMod-Main-DLL
+        path: HsMod/bin/Release/net6.0-windows/HsMod.dll
+        if-no-files-found: error
         
-    - name: Upload all build output
+    - name: Upload all Release files
       uses: actions/upload-artifact@v4
       with:
-        name: Full-Build-Output
-        path: bin/
-        if-no-files-found: warn
+        name: HsMod-Complete-Build
+        path: HsMod/bin/Release/
+        if-no-files-found: error
