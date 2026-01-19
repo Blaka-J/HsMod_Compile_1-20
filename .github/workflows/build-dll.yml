@@ -1,6 +1,13 @@
-name: Simple HsMod DLL Build
+name: Build HsMod DLL
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:  # 允许手动触发
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   build:
@@ -9,24 +16,57 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+      with:
+        submodules: recursive  # 重要：包含子模块
+        
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '6.0.x'
-        
-    - name: Build all projects
+        dotnet-version: |
+          6.0.x
+          7.0.x
+          8.0.x
+          
+    - name: Show project structure
       run: |
-        # 创建简单的构建脚本
-        echo "尝试构建项目..."
-        dotnet new console -n TestBuild --force
-        cd TestBuild
-        echo "public class Test { public static void Main() {} }" > Program.cs
-        dotnet build --configuration Release
-        echo "如果原项目构建失败，至少这个测试会成功"
+        echo "=== 项目结构 ==="
+        dir
+        echo "=== 寻找项目文件 ==="
+        dir /s *.csproj *.sln 2>nul || echo "未找到项目文件"
         
-    - name: Upload test files
+    - name: Try to find and build solution
+      run: |
+        # 尝试查找并构建项目
+        if exist "*.sln" (
+          echo "找到解决方案文件，开始构建..."
+          dotnet build *.sln --configuration Release -p:Platform="Any CPU"
+        ) else (
+          echo "查找.csproj文件..."
+          for /f "delims=" %%i in ('dir /s /b *.csproj') do (
+            echo "构建项目: %%~nxi"
+            dotnet build "%%i" --configuration Release
+          )
+        )
+        
+    - name: List all generated files
+      run: |
+        echo "=== 查找所有DLL文件 ==="
+        dir /s *.dll 2>nul || echo "未找到DLL文件"
+        echo "=== 构建输出目录 ==="
+        if exist bin dir bin /s
+        
+    - name: Upload DLL artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: Test-Output
-        path: TestBuild/bin/Release/
+        name: HsMod-DLLs
+        path: |
+          **/bin/Release/**/*.dll
+          **/Release/**/*.dll
+        if-no-files-found: warn
+        
+    - name: Upload all build output
+      uses: actions/upload-artifact@v4
+      with:
+        name: Full-Build-Output
+        path: bin/
+        if-no-files-found: warn
