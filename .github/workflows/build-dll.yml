@@ -61,12 +61,12 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: HsMod-Main-DLL
-        path: HsMod/bin/Release/net8.0-windows/HsMod.dll
+        path: HsMod/Release/HsMod.dll
         if-no-files-found: error
         
     - name: Upload all Release files
       uses: actions/upload-artifact@v4
       with:
         name: HsMod-Complete-Build
-        path: HsMod/bin/Release/
+        path: HsMod/Release/
         if-no-files-found: error
